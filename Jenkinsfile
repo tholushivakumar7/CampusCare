@@ -109,7 +109,7 @@ pipeline {
                       --add-host=host.docker.internal:172.31.40.107 \
                       -v "$WORKSPACE/selenium:/tests:ro" \
                       -e SELENIUM_URL=http://chrome:4444 \
-                      -e WEBSITE_URL=http://host.docker.internal:3000/ \
+                      -e WEBSITE_URL=http://54.92.173.67:3000/ \
                       python:3.12-slim \
                       sh -c "pip install --no-cache-dir selenium && python /tests/test_homepage.py"
                 '''
