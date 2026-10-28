@@ -106,7 +106,7 @@ pipeline {
 
                     docker run --rm \
                       --network "$NETWORK" \
-                      --add-host=host.docker.internal:host-gateway \
+                      --add-host=host.docker.internal:172.31.40.107 \
                       -v "$WORKSPACE/selenium:/tests:ro" \
                       -e SELENIUM_URL=http://chrome:4444 \
                       -e WEBSITE_URL=http://host.docker.internal:3000/ \
