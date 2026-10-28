@@ -1,9 +1,28 @@
 
 const http = require("node:http");
+const fs = require("node:fs");
+const path = require("node:path");
+
+const frontendPath = path.join(__dirname, "client", "dist");
+const mimeTypes = {
+  ".html": "text/html; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".svg": "image/svg+xml",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".ico": "image/x-icon",
+  ".woff": "font/woff",
+  ".woff2": "font/woff2"
+};
 
 function createServer() {
   return http.createServer((req, res) => {
-    if (req.url === "/health") {
+    const pathname = new URL(req.url, "http://localhost").pathname;
+
+    if (pathname === "/health") {
       res.writeHead(200, { "Content-Type": "application/json" });
       return res.end(JSON.stringify({
         status: "healthy",
@@ -11,58 +30,30 @@ function createServer() {
       }));
     }
 
-    if (req.url === "/") {
+    // Serve React's built frontend.
+    const requestedPath =
+      pathname === "/" ? "index.html" : pathname.replace(/^\/+/, "");
+
+    const safePath = path.resolve(frontendPath, requestedPath);
+
+    if (
+      safePath.startsWith(frontendPath + path.sep) ||
+      safePath === path.join(frontendPath, "index.html")
+    ) {
+      if (fs.existsSync(safePath) && fs.statSync(safePath).isFile()) {
+        const contentType =
+          mimeTypes[path.extname(safePath).toLowerCase()] ||
+          "application/octet-stream";
+
+        res.writeHead(200, { "Content-Type": contentType });
+        return fs.createReadStream(safePath).pipe(res);
+      }
+    }
+
+    // Allow React client-side routes to load.
+    if (!path.extname(pathname) && fs.existsSync(path.join(frontendPath, "index.html"))) {
       res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-      return res.end(`<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>CampusCare</title>
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #f1f5f9;
-      color: #172554;
-    }
-    header {
-      background: #123b63;
-      color: white;
-      padding: 24px 8%;
-    }
-    main {
-      max-width: 850px;
-      margin: 40px auto;
-      padding: 20px;
-    }
-    section {
-      background: white;
-      padding: 28px;
-      border-radius: 14px;
-    }
-    .status {
-      color: #15803d;
-      font-weight: bold;
-    }
-  </style>
-</head>
-<body>
-  <header>
-    <h1>CampusCare</h1>
-    <p>Smart Campus Maintenance System</p>
-  </header>
-  <main>
-    <section>
-      <h2>Welcome to CampusCare</h2>
-      <p>A better way to manage campus maintenance problems.</p>
-      <p>Report water leakage, electrical faults, broken fans and damaged furniture.</p>
-      <p class="status">Application is running successfully.</p>
-      <p>Version 1.0.0 | Automated CI/CD deployment</p>
-    </section>
-  </main>
-</body>
-</html>`);
+      return fs.createReadStream(path.join(frontendPath, "index.html")).pipe(res);
     }
 
     res.writeHead(404, { "Content-Type": "application/json" });
