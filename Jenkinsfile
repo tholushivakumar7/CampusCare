@@ -20,24 +20,21 @@ pipeline {
             }
         }
 
-       
-stage('Test') {
-    steps {
-        sh '''
-            docker run --rm \
-              -v "$WORKSPACE:/app" \
-              -w /app/client \
-              node:22-alpine sh -c "npm ci && npm run build"
+        stage('Test') {
+            steps {
+                sh '''
+                    docker run --rm \
+                      -v "$WORKSPACE:/app" \
+                      -w /app/client \
+                      node:22-alpine sh -c "npm ci && npm run build"
 
-            docker run --rm \
-              -v "$WORKSPACE:/app" \
-              -w /app \
-              node:22-alpine npm test
-        '''
-    }
-}
-
-
+                    docker run --rm \
+                      -v "$WORKSPACE:/app" \
+                      -w /app \
+                      node:22-alpine npm test
+                '''
+            }
+        }
 
         stage('Build Docker Image') {
             steps {
@@ -79,6 +76,42 @@ stage('Test') {
                     echo "Health check failed."
                     docker logs "$CONTAINER_NAME" || true
                     exit 1
+                '''
+            }
+        }
+
+        stage('Selenium Browser Tests') {
+            steps {
+                sh '''
+                    set -eu
+
+                    NETWORK="campuscare-selenium-${BUILD_NUMBER}"
+                    SELENIUM_CONTAINER="campuscare-chrome-${BUILD_NUMBER}"
+
+                    cleanup() {
+                        docker rm -f "$SELENIUM_CONTAINER" >/dev/null 2>&1 || true
+                        docker network rm "$NETWORK" >/dev/null 2>&1 || true
+                    }
+
+                    trap cleanup EXIT
+
+                    docker network create "$NETWORK"
+
+                    docker run -d \
+                      --name "$SELENIUM_CONTAINER" \
+                      --network "$NETWORK" \
+                      --network-alias chrome \
+                      --shm-size=2g \
+                      selenium/standalone-chrome:latest
+
+                    docker run --rm \
+                      --network "$NETWORK" \
+                      --add-host=host.docker.internal:host-gateway \
+                      -v "$WORKSPACE/selenium:/tests:ro" \
+                      -e SELENIUM_URL=http://chrome:4444 \
+                      -e WEBSITE_URL=http://host.docker.internal:3000/ \
+                      python:3.12-slim \
+                      sh -c "pip install --no-cache-dir selenium && python /tests/test_homepage.py"
                 '''
             }
         }
