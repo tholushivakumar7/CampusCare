@@ -10,25 +10,25 @@ RUN npm ci
 COPY client/ ./
 RUN npm run build
 
-# Production backend image
+# Production application
 FROM node:22-alpine
 
 WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Install backend dependencies
+# Install backend dependencies, including Express
 COPY package*.json ./
 RUN npm ci --omit=dev
 
-# Copy backend source files
+# Copy backend source code
 COPY server.js ./
 COPY config ./config
 COPY routes ./routes
 COPY middleware ./middleware
 COPY models ./models
 
-# Copy built React frontend
+# Copy the compiled React frontend
 COPY --from=frontend-build /app/client/dist ./client/dist
 
 EXPOSE 3000
