@@ -1,18 +1,17 @@
-
 const express = require("express");
 const path = require("node:path");
 require("dotenv").config();
 
 const connectDB = require("./config/db");
 const authRoutes = require("./routes/auth");
+const { authenticateToken } = require("./middleware/auth");
 
 const app = express();
 const frontendPath = path.join(__dirname, "client", "dist");
 
-// Parse JSON request bodies
 app.use(express.json({ limit: "1mb" }));
 
-// Health check for Jenkins and deployment monitoring
+// Health check
 app.get("/health", (req, res) => {
   res.status(200).json({
     status: "healthy",
@@ -20,9 +19,8 @@ app.get("/health", (req, res) => {
   });
 });
 
-// Registration and login APIs
+// Authentication routes
 app.use("/api/auth", authRoutes);
-const { authenticateToken } = require("./middleware/auth");
 
 app.get("/api/auth/me", authenticateToken, (req, res) => {
   res.json({
@@ -30,17 +28,17 @@ app.get("/api/auth/me", authenticateToken, (req, res) => {
     user: req.user
   });
 });
-// Serve the React frontend
+
+// Serve React frontend
 app.use(express.static(frontendPath));
 
-// Allow React client-side routes to load
 app.get("/{*path}", (req, res, next) => {
   res.sendFile(path.join(frontendPath, "index.html"), (error) => {
     if (error) next(error);
   });
 });
 
-// Handle unknown API routes
+// Handle unknown routes
 app.use((req, res) => {
   res.status(404).json({ error: "Not found" });
 });
@@ -60,11 +58,18 @@ async function startServer() {
   }
 }
 
+const http = require("node:http");
+
+function createServer() {
+  return http.createServer(app);
+}
+
 if (require.main === module) {
   startServer();
 }
 
 module.exports = {
   app,
-  startServer
+  startServer,
+  createServer
 };
