@@ -1,5 +1,5 @@
 
-# Stage 1: Build the React frontend
+# Build the React frontend
 FROM node:22-alpine AS frontend-build
 
 WORKDIR /app/client
@@ -10,22 +10,26 @@ RUN npm ci
 COPY client/ ./
 RUN npm run build
 
-
-# Stage 2: Run the CampusCare server
+# Production backend image
 FROM node:22-alpine
-
-ENV NODE_ENV=production
-ENV PORT=3000
 
 WORKDIR /app
 
-COPY package.json server.js ./
-COPY test ./test
+ENV NODE_ENV=production
 
-# Include the compiled React dashboard
+# Install backend dependencies
+COPY package*.json ./
+RUN npm ci --omit=dev
+
+# Copy backend source files
+COPY server.js ./
+COPY config ./config
+COPY routes ./routes
+COPY middleware ./middleware
+COPY models ./models
+
+# Copy built React frontend
 COPY --from=frontend-build /app/client/dist ./client/dist
-
-USER node
 
 EXPOSE 3000
 
