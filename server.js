@@ -2,7 +2,8 @@
 const http = require("node:http");
 const fs = require("node:fs");
 const path = require("node:path");
-
+require("dotenv").config();
+const connectDB = require("./config/db");   
 const frontendPath = path.join(__dirname, "client", "dist");
 const mimeTypes = {
   ".html": "text/html; charset=utf-8",
@@ -61,12 +62,21 @@ function createServer() {
   });
 }
 
+
 if (require.main === module) {
   const port = Number(process.env.PORT) || 3000;
 
-  createServer().listen(port, "0.0.0.0", () => {
-    console.log(`CampusCare running on port ${port}`);
-  });
+  connectDB()
+    .then(() => {
+      createServer().listen(port, "0.0.0.0", () => {
+        console.log(`CampusCare running on port ${port}`);
+      });
+    })
+    .catch((error) => {
+      console.error("Failed to start CampusCare:", error.message);
+      process.exit(1);
+    });
 }
+
 
 module.exports = { createServer };
