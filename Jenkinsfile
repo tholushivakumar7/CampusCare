@@ -20,21 +20,25 @@ pipeline {
             }
         }
 
-        stage('Test') {
-            steps {
-                sh '''
-                    docker run --rm \
-                      -v "$WORKSPACE:/app" \
-                      -w /app/client \
-                      node:22-alpine sh -c "npm ci && npm run build"
+       stage('Test') {
+    steps {
+        sh '''
+            echo "Building frontend..."
 
-                    docker run --rm \
-                      -v "$WORKSPACE:/app" \
-                      -w /app \
-                      node:22-alpine npm test
-                '''
-            }
-        }
+            docker run --rm \
+              -v "$WORKSPACE:/app" \
+              -w /app/client \
+              node:22-alpine sh -c "npm ci && npm run build"
+
+            echo "Installing backend dependencies and running tests..."
+
+            docker run --rm \
+              -v "$WORKSPACE:/app" \
+              -w /app \
+              node:22-alpine sh -c "npm ci && npm test"
+        '''
+    }
+}
 
         stage('Build Docker Image') {
             steps {
